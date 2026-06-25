@@ -1,7 +1,6 @@
 package com.web.config;
 
 import com.web.security.JwtAuthFilter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -17,10 +16,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration
-@RequiredArgsConstructor
 public class AppConfig {
-
-    private final JwtAuthFilter jwtAuthFilter;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -28,7 +24,7 @@ public class AppConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
