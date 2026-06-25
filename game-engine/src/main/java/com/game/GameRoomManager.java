@@ -75,7 +75,7 @@ public class GameRoomManager {
         isn't already used by openhfts other threads
          */
         executor.submit(() -> {
-            try (AffinityLock al = AffinityLock.acquireCore()) {
+            try (AffinityLock al = AffinityLock.acquireLock(0)) {
                 System.out.println("Pipeline 0 locked to CPU ID: " + al.cpuId() + ". Starting 60Hz Loop...");
                 GameLoop loop = new GameLoop();
                 // startIndex: 0, endIndex: MAX, isTimeKeeper: true
@@ -86,7 +86,7 @@ public class GameRoomManager {
         });
 
         executor.submit(() -> {
-            try (AffinityLock al = AffinityLock.acquireCore()) {
+            try (AffinityLock al = AffinityLock.acquireLock(1)) {
                 System.out.println("Pipeline 1 locked to CPU ID: " + al.cpuId() + ". Starting 60Hz Loop...");
                 GameLoop loop = new GameLoop();
 
