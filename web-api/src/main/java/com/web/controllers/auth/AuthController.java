@@ -1,4 +1,4 @@
-package com.web.controllers;
+package com.web.controllers.auth;
 
 import com.web.services.AuthService;
 import lombok.RequiredArgsConstructor;

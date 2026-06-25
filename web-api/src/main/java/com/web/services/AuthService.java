@@ -1,8 +1,8 @@
 package com.web.services;
 
-import com.web.controllers.AuthResponse;
-import com.web.controllers.LoginRequest;
-import com.web.controllers.RegisterRequest;
+import com.web.controllers.auth.AuthResponse;
+import com.web.controllers.auth.LoginRequest;
+import com.web.controllers.auth.RegisterRequest;
 import com.web.entities.User;
 import com.web.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
