@@ -26,10 +26,6 @@ public class AppConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Prevent Spring Boot from auto-registering JwtAuthFilter as a global
-     * servlet filter. We only want it in the Spring Security filter chain.
-     */
     @Bean
     public FilterRegistrationBean<JwtAuthFilter> jwtFilterRegistration(JwtAuthFilter filter) {
         FilterRegistrationBean<JwtAuthFilter> registration = new FilterRegistrationBean<>(filter);
