@@ -1,5 +1,7 @@
 package com.game;
 
+import java.util.concurrent.locks.LockSupport;
+
 public class GameLoop {
 
     public static class MatchSnapshot {
@@ -14,7 +16,7 @@ public class GameLoop {
         }
     }
 
-    public void runCorePipeline(int startIndex, int endIndex, boolean isTimeKeeper) {
+    public void runCorePipeline(int startIndex, int endIndex, boolean isTimeKeeper) throws InterruptedException {
         long frameDurationNanos = GameRoomManager.TICK_NS;
 
         while (true) {
@@ -38,9 +40,21 @@ public class GameLoop {
                 // TODO: Blast UDP Output Buffer
             }
 
+            long SPIN_THRESHOLD = 1_000_000; // 1ms
             long nextFrameTime = loopStartNanos + frameDurationNanos;
-            while (System.nanoTime() < nextFrameTime) {
-                Thread.onSpinWait();
+
+            while (true) {
+                long remaining = nextFrameTime - System.nanoTime();
+
+                if (remaining <= 0) {
+                    break;
+                }
+
+                if (remaining > SPIN_THRESHOLD) {
+                    LockSupport.parkNanos(remaining);
+                } else {
+                    Thread.onSpinWait();
+                }
             }
         }
     }

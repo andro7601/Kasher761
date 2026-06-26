@@ -1,25 +1,24 @@
-# ── Stage 1: build ──────────────────────────────────────────────────────────
-FROM maven:3.9-eclipse-temurin-25 AS build
+FROM eclipse-temurin:25-jdk-alpine AS build
 
-WORKDIR /app
+WORKDIR /workspace
 
-COPY pom.xml .
-COPY game-engine/pom.xml game-engine/
-COPY web-api/pom.xml     web-api/
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+COPY game-engine/pom.xml game-engine/pom.xml
+COPY web-api/pom.xml web-api/pom.xml
 
-RUN mvn dependency:go-offline -pl web-api -am -q
+RUN ./mvnw -B -pl web-api -am dependency:go-offline
 
 COPY game-engine/src game-engine/src
-COPY web-api/src     web-api/src
+COPY web-api/src web-api/src
 
-RUN mvn clean package -pl web-api -am -DskipTests -q
+RUN ./mvnw -B -pl web-api -am package -DskipTests
 
-# ── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM eclipse-temurin:25-jre-alpine
 
 WORKDIR /app
 
-COPY --from=build /app/web-api/target/*.jar app.jar
+COPY --from=build /workspace/web-api/target/web-api-*.jar app.jar
 
 EXPOSE 8080
 
