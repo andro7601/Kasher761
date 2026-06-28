@@ -3,8 +3,9 @@ package com.web.services;
 import com.web.controllers.auth.AuthResponse;
 import com.web.controllers.auth.LoginRequest;
 import com.web.controllers.auth.RegisterRequest;
-import com.web.entities.User;
-import com.web.repositories.UserRepository;
+import com.web.db.entities.User;
+
+import com.web.db.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;

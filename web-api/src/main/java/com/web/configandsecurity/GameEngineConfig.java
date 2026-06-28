@@ -1,4 +1,4 @@
-package com.web.config;
+package com.web.configandsecurity;
 
 import com.game.GameRoomManager;
 import org.springframework.context.annotation.Bean;

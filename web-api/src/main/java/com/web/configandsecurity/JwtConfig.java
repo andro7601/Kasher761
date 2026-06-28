@@ -1,4 +1,4 @@
-package com.web.config;
+package com.web.configandsecurity;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;

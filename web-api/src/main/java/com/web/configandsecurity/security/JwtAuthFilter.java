@@ -1,4 +1,4 @@
-package com.web.security;
+package com.web.configandsecurity.security;
 
 import com.web.services.JwtService;
 import jakarta.servlet.FilterChain;
