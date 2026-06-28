@@ -11,13 +11,10 @@ public class PacketHandler {
 
     }
 
-    static ByteBuffer handle(Match_Snapshot snapshot,ByteBuffer buf) {
-        return null;
+    public static void Snapshot_To_Buffer(Match_Snapshot snapshot,ByteBuffer buf) {
+
     }
 
-    public static ByteBuffer Snapshot_To_Buffer(Match_Snapshot snapshot) {
-        return null;
-    }
 
 
     void Load(){

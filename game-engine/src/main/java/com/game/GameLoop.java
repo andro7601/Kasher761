@@ -11,8 +11,6 @@ import static com.game.GameRoomManager.*;
 public class GameLoop {
 
     private static final long SPIN_THRESHOLD_NS = 1_500_000L;
-    long localTickCount = 0;
-    long engineStartNanos;
     public static final Ongoing_Match[] activeMatches = new Ongoing_Match[2 * GameRoomManager.MAX_MATCHES_PER_CORE];
 
     static {
@@ -23,8 +21,8 @@ public class GameLoop {
 
 
     public void runCorePipeline(int startIndex, int endIndex, boolean isTimeKeeper) throws InterruptedException {
-        localTickCount = 0;
-        engineStartNanos = System.nanoTime();
+        long localTickCount = 0;
+        long engineStartNanos = System.nanoTime();
         while (true) {
             if (isTimeKeeper) {
                 globalTick.incrementAndGet();
@@ -50,15 +48,19 @@ public class GameLoop {
     }
 
     public void runNetworkIO() throws InterruptedException, IOException {
-        localTickCount = 0;
-        engineStartNanos = System.nanoTime();
+        long localTickCount = 0;
+        long engineStartNanos = System.nanoTime();
         while (true) {
             long currentTick = globalTick.get();
             for (int i = 0; i < 2 * MAX_MATCHES_PER_CORE; i++) {
                 Ongoing_Match match = activeMatches[i];
                 if (!match.active() && currentTick < match.startTick) continue;
-                match.socket.Empty_OS_BUFFER_IO();
-                match.socket.SEND_OUT_PACKETS_IO();
+
+                UdpSocket sock = match.socket;
+                if (sock == null) continue;
+
+                sock.Empty_OS_BUFFER_IO();
+                sock.SEND_OUT_PACKETS_IO();
             }
             localTickCount++;
             long targetnanos = engineStartNanos + localTickCount * TICK_NS;
