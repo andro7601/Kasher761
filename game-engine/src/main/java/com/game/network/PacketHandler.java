@@ -11,8 +11,8 @@ public class PacketHandler {
 
     }
 
-    static void handle(Match_Snapshot snapshot) {
-
+    static ByteBuffer handle(Match_Snapshot snapshot,ByteBuffer buf) {
+        return null;
     }
 
     public static ByteBuffer Snapshot_To_Buffer(Match_Snapshot snapshot) {

@@ -3,6 +3,7 @@ package com.game;
 import com.game.dto.Ongoing_Match;
 import com.game.network.UdpSocket;
 
+import java.io.IOException;
 import java.util.concurrent.locks.LockSupport;
 
 import static com.game.GameRoomManager.*;
@@ -48,6 +49,23 @@ public class GameLoop {
         }
     }
 
+    public void runNetworkIO() throws InterruptedException, IOException {
+        localTickCount = 0;
+        engineStartNanos = System.nanoTime();
+        while (true) {
+            long currentTick = globalTick.get();
+            for (int i = 0; i < 2 * MAX_MATCHES_PER_CORE; i++) {
+                Ongoing_Match match = activeMatches[i];
+                if (!match.active() && currentTick < match.startTick) continue;
+                match.socket.Empty_OS_BUFFER_IO();
+                match.socket.SEND_OUT_PACKETS_IO();
+            }
+            localTickCount++;
+            long targetnanos = engineStartNanos + localTickCount * TICK_NS;
+            sleepuntil(targetnanos);
+        }
+    }
+
     void sleepuntil(long targetnanos) {
         long remaining = targetnanos - System.nanoTime();
         if (remaining <= 0) {
@@ -59,23 +77,6 @@ public class GameLoop {
         }
         while (targetnanos > System.nanoTime()) {
             Thread.onSpinWait();
-        }
-    }
-
-    public void runNetworkIO() throws InterruptedException {
-        localTickCount = 0;
-        engineStartNanos = System.nanoTime();
-        while (true) {
-            long currentTick = globalTick.get();
-            for (int i = 0; i < 2 * MAX_MATCHES_PER_CORE; i++) {
-                Ongoing_Match match = activeMatches[i];
-                if (!match.active() && currentTick < match.startTick) continue;
-                match.socket.Empty_OS_BUFFER();
-                match.socket.SEND_OUT_PACKETS();
-            }
-            localTickCount++;
-            long targetnanos = engineStartNanos + localTickCount * TICK_NS;
-            sleepuntil(targetnanos);
         }
     }
 }

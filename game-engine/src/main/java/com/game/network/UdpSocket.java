@@ -11,12 +11,11 @@ import com.game.GameRoomManager.Player;
 public final class UdpSocket {
 
 
-    private static final int MAX_PACKET_SIZE = 1400;
+    public static final int MAX_PACKET_SIZE = 1400;
     private static final int MAX_PLAYER_COUNT=100;
     private static final int MAX_PACKET_COUNT=320;
 
     private ByteBuffer tempBuf = ByteBuffer.allocate(MAX_PACKET_SIZE);
-    private final ByteBuffer sendBuf = ByteBuffer.allocateDirect(MAX_PACKET_SIZE);
 
     private final DatagramChannel channel;
     private final int port;
@@ -44,7 +43,7 @@ public final class UdpSocket {
 
     }
 
-    public void Empty_OS_BUFFER() {
+    public void Empty_OS_BUFFER_IO() {
         SocketAddress addr;
         try { addr = channel.receive(tempBuf); } catch (IOException e) { return ; }
         if (addr == null) return ;
@@ -54,10 +53,11 @@ public final class UdpSocket {
         clientShards[index].Receive_Packet_IO(tempBuf);
     }
 
-    public void SEND_OUT_PACKETS(){
-        sendBuf.clear();
+    public void SEND_OUT_PACKETS_IO()throws IOException {
         for(int i=0; i<clientShards.length; ++i) {
-            clientShards[i].Send_Out_Snapshot();
+            ClientShard clientShard=clientShards[i];
+            ByteBuffer sendbuf=clientShard.getSendbuf();
+            channel.send(sendbuf,clientShard.Address);
         }
     }
 
