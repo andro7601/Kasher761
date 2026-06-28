@@ -1,14 +1,24 @@
-package com.game;
+package com.game.network;
+
+import com.game.dto.Match_Snapshot;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
 
 public class PacketHandler {
 
-    void handle(ByteBuffer bytes, SocketAddress addrs) {
+    static void handle(ByteBuffer buf) {
 
     }
+
+    static void handle(Match_Snapshot snapshot) {
+
+    }
+
+    public static ByteBuffer Snapshot_To_Buffer(Match_Snapshot snapshot) {
+        return null;
+    }
+
 
     void Load(){
 

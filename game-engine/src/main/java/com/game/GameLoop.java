@@ -1,61 +1,81 @@
 package com.game;
 
+import com.game.dto.Ongoing_Match;
+import com.game.network.UdpSocket;
+
 import java.util.concurrent.locks.LockSupport;
+
+import static com.game.GameRoomManager.*;
 
 public class GameLoop {
 
-    public static class MatchSnapshot {
-        public long startTick = Long.MAX_VALUE; // Default to max so it's ignored until allocated
-        public int notimplementingothersyet;
-    }
+    private static final long SPIN_THRESHOLD_NS = 1_500_000L;
+    long localTickCount = 0;
+    long engineStartNanos;
+    public static final Ongoing_Match[] activeMatches = new Ongoing_Match[2 * GameRoomManager.MAX_MATCHES_PER_CORE];
 
-    public static final MatchSnapshot[] activeMatches = new MatchSnapshot[2 * GameRoomManager.MAX_MATCHES_PER_CORE];
     static {
         for (int i = 0; i < activeMatches.length; i++) {
-            activeMatches[i] = new MatchSnapshot();
+            activeMatches[i] = new Ongoing_Match();
         }
     }
 
+
     public void runCorePipeline(int startIndex, int endIndex, boolean isTimeKeeper) throws InterruptedException {
-        long frameDurationNanos = GameRoomManager.TICK_NS;
-
+        localTickCount = 0;
+        engineStartNanos = System.nanoTime();
         while (true) {
-            long loopStartNanos = System.nanoTime();
-
             if (isTimeKeeper) {
-                GameRoomManager.globalTick.incrementAndGet();
+                globalTick.incrementAndGet();
             }
-
-            long currentTick = GameRoomManager.globalTick.get();
-
+            long currentTick = globalTick.get();
             for (int i = startIndex; i < endIndex; i++) {
-                MatchSnapshot match = activeMatches[i];
+                Ongoing_Match match = activeMatches[i];
+                if (!match.active() && currentTick < match.startTick) continue;
 
-                if (currentTick < match.startTick) {
-                    continue;
-                }
+                UdpSocket sock = match.socket;
+                if (sock == null) continue;
 
-                // TODO: Read UDP Input Buffer
-                // TODO: Update Spatial Grid / Physics
-                // TODO: Blast UDP Output Buffer
+
+                // TODO: physics, collision, game logic
+
+                // ── 4. SEND: broadcast state to all connected clients ───────────
+                // TODO: encode snapshot, sock.sendTo(data, offset, len, clientAddr);
             }
+            localTickCount++;
+            long targetnanos = engineStartNanos + localTickCount * TICK_NS;
+            sleepuntil(targetnanos);
+        }
+    }
 
-            long SPIN_THRESHOLD = 1_000_000; // 1ms
-            long nextFrameTime = loopStartNanos + frameDurationNanos;
+    void sleepuntil(long targetnanos) {
+        long remaining = targetnanos - System.nanoTime();
+        if (remaining <= 0) {
+            return;
+        }
+        long parknanos = remaining - SPIN_THRESHOLD_NS;
+        if (parknanos > 0) {
+            LockSupport.parkNanos(parknanos);
+        }
+        while (targetnanos > System.nanoTime()) {
+            Thread.onSpinWait();
+        }
+    }
 
-            while (true) {
-                long remaining = nextFrameTime - System.nanoTime();
-
-                if (remaining <= 0) {
-                    break;
-                }
-
-                if (remaining > SPIN_THRESHOLD) {
-                    LockSupport.parkNanos(remaining);
-                } else {
-                    Thread.onSpinWait();
-                }
+    public void runNetworkIO() throws InterruptedException {
+        localTickCount = 0;
+        engineStartNanos = System.nanoTime();
+        while (true) {
+            long currentTick = globalTick.get();
+            for (int i = 0; i < 2 * MAX_MATCHES_PER_CORE; i++) {
+                Ongoing_Match match = activeMatches[i];
+                if (!match.active() && currentTick < match.startTick) continue;
+                match.socket.Empty_OS_BUFFER();
+                match.socket.SEND_OUT_PACKETS();
             }
+            localTickCount++;
+            long targetnanos = engineStartNanos + localTickCount * TICK_NS;
+            sleepuntil(targetnanos);
         }
     }
 }
