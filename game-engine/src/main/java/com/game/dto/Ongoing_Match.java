@@ -1,6 +1,5 @@
 package com.game.dto;
 
-import com.game.GameRoomManager.Player;
 import com.game.network.UdpSocket;
 
 public class Ongoing_Match {
@@ -19,7 +18,7 @@ public class Ongoing_Match {
         return active;
     }
 
-    public void activate(int port, long startTick, Player[] players) {
+    public void activate(int port, long startTick, long[] players) {
         try {
             this.socket = new UdpSocket(port, players);
             this.startTick = startTick;

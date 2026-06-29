@@ -1,13 +1,14 @@
 package com.web.redis;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
 
 import static com.web.StartupSchemaInit.*;
 
@@ -15,39 +16,84 @@ import static com.web.StartupSchemaInit.*;
 @Component
 public class RedisService {
 
-    private final RedisTemplate<String, Object> redistemplate;
+    private final StringRedisTemplate redisTemplate;
 
-    public void ADD_PLAYER_TO_MATCHMAKING(String playerId, int playerELO, String gamemode) {
-        int bucketIndex = playerELO / 100;
-        String bucketKey = PREFIX_FOR_MATCHMAKING_BUCKETS + gamemode + ":" + bucketIndex;
+    public void ADD_PLAYER_TO_MATCHMAKING(long playerId, int playerELO, String gamemode) {
+        REMOVE_PLAYER_FROM_MATCHMAKING(playerId, gamemode);
 
-        redistemplate.opsForZSet().add(bucketKey, playerId, System.currentTimeMillis());
-        redistemplate.opsForList().rightPush(
-                PREFIX_FOR_ARRAY_OF_PLAYERS_BUCKETS_IN_MATCHMAKING + playerId, bucketKey);
+        int bucketIndex = Math.max(0, Math.min(playerELO / 100, BUCKET_COUNT - 1));
+        String bucketKey = bucketKey(gamemode, bucketIndex);
+        String playerIdValue = String.valueOf(playerId);
+
+        redisTemplate.opsForZSet().add(bucketKey, playerIdValue, System.currentTimeMillis());
+
+        String playerBucketsKey = playerBucketsKey(playerId);
+        redisTemplate.opsForList().remove(playerBucketsKey, 0, bucketKey);
+        redisTemplate.opsForList().rightPush(playerBucketsKey, bucketKey);
+        redisTemplate.expire(playerBucketsKey, 120, TimeUnit.MINUTES);
     }
 
-    public void REMOVE_PLAYERS_FROM_MATCHMAKING(String playerId) {
-        Object popped;
-        while ((popped = redistemplate.opsForList().rightPop(
-                PREFIX_FOR_ARRAY_OF_PLAYERS_BUCKETS_IN_MATCHMAKING + playerId)) != null) {
-            redistemplate.opsForZSet().remove(popped.toString(), playerId);
+    public void REMOVE_PLAYER_FROM_MATCHMAKING(long playerId) {
+        String playerIdValue = String.valueOf(playerId);
+        String playerBucketsKey = playerBucketsKey(playerId);
+        String bucketKey;
+        while ((bucketKey = redisTemplate.opsForList().rightPop(playerBucketsKey)) != null) {
+            redisTemplate.opsForZSet().remove(bucketKey, playerIdValue);
         }
     }
-    public List<String> GET_BUCKET_PLAYERS(String gamemode, int bucketIndex) {
-        String bucketKey = PREFIX_FOR_MATCHMAKING_BUCKETS + gamemode + ":" + bucketIndex;
-        Set<Object> result = redistemplate.opsForZSet().range(bucketKey, 0, -1);
-        if (result == null) return List.of();
-        return result.stream().map(Object::toString).collect(Collectors.toList());
+
+    public void REMOVE_PLAYER_FROM_MATCHMAKING(long playerId, String gamemode) {
+        String playerBucketsKey = playerBucketsKey(playerId);
+        List<String> currentBuckets = redisTemplate.opsForList().range(playerBucketsKey, 0, -1);
+        if (currentBuckets == null || currentBuckets.isEmpty()) {
+            return;
+        }
+
+        String playerIdValue = String.valueOf(playerId);
+        String gamemodeBucketPrefix = PREFIX_FOR_MATCHMAKING + PREFIX_FOR_MATCHMAKING_BUCKETS + gamemode + ":";
+        List<String> bucketsToKeep = new ArrayList<>();
+
+        for (String currentBucket : currentBuckets) {
+            if (currentBucket.startsWith(gamemodeBucketPrefix)) {
+                redisTemplate.opsForZSet().remove(currentBucket, playerIdValue);
+            } else {
+                bucketsToKeep.add(currentBucket);
+            }
+        }
+
+        redisTemplate.delete(playerBucketsKey);
+        if (!bucketsToKeep.isEmpty()) {
+            redisTemplate.opsForList().rightPushAll(playerBucketsKey, bucketsToKeep);
+            redisTemplate.expire(playerBucketsKey, 120, TimeUnit.MINUTES);
+        }
     }
 
-    public void CREATE_MATCH(List<String> players, String matchId) {
-        for (String playerId : players) {
-            redistemplate.opsForValue().set(
-                    PREFIX_FOR_MATCHMAKING_MAP_PLAYERID_TO_MATCHID + playerId,
+    public List<Long> GET_BUCKET_PLAYERS(String gamemode, int bucketIndex) {
+        Set<String> result = redisTemplate.opsForZSet().range(bucketKey(gamemode, bucketIndex), 0, -1);
+        if (result == null) return List.of();
+        return result.stream().map(Long::valueOf).toList();
+    }
+
+    public void CREATE_MATCH(List<Long> players, String matchId) {
+        for (long playerId : players) {
+            redisTemplate.opsForValue().set(
+                    playerMatchKey(playerId),
                     matchId,
                     Duration.ofHours(2)
             );
-            REMOVE_PLAYERS_FROM_MATCHMAKING(playerId);
+            REMOVE_PLAYER_FROM_MATCHMAKING(playerId);
         }
+    }
+
+    private String bucketKey(String gamemode, int bucketIndex) {
+        return PREFIX_FOR_MATCHMAKING + PREFIX_FOR_MATCHMAKING_BUCKETS + gamemode + ":" + bucketIndex;
+    }
+
+    private String playerBucketsKey(long playerId) {
+        return PREFIX_FOR_MATCHMAKING + PREFIX_FOR_ARRAY_OF_PLAYERS_BUCKETS_IN_MATCHMAKING + playerId;
+    }
+
+    private String playerMatchKey(long playerId) {
+        return PREFIX_FOR_MATCHMAKING + PREFIX_FOR_MATCHMAKING_MAP_PLAYERID_TO_MATCHID + playerId;
     }
 }

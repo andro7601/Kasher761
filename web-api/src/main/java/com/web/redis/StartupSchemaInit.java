@@ -1,5 +1,7 @@
-package com.web;
+package com.web.redis;
 
+import com.web.GameModeRegistry;
+import com.web.db.entities.GameMode;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -10,8 +12,7 @@ import org.springframework.stereotype.Component;
 public class StartupSchemaInit{
 
     private final RedisTemplate<String, Object> redistemplate;
-
-    public static final String[] GAME_MODES = {"4_PLAYERS", "2_PLAYERS"};
+    private final GameModeRegistry gameModeRegistry;
 
     public static final String PREFIX_FOR_MATCHMAKING ="Matchmaking:";//prefix for everything leading to matchmaking
 
@@ -27,9 +28,10 @@ public class StartupSchemaInit{
 
     @PostConstruct
     private void redisSchemaInit() {
-        for (String gameMode : GAME_MODES) {
+        for (GameMode gameMode : gameModeRegistry.all()) {
+            String gameModeName=gameMode.getName();
             for (int bucketIdx = 0; bucketIdx < BUCKET_COUNT; bucketIdx++) {
-                redistemplate.delete(PREFIX_FOR_MATCHMAKING +PREFIX_FOR_MATCHMAKING_BUCKETS+ gameMode + ":" + bucketIdx);
+                redistemplate.delete(PREFIX_FOR_MATCHMAKING +PREFIX_FOR_MATCHMAKING_BUCKETS+ gameModeName + ":" + bucketIdx);
             }
         }
         redistemplate.delete(PREFIX_FOR_MATCHMAKING +PREFIX_FOR_MATCHMAKING_MAP_PLAYERID_TO_MATCHID);

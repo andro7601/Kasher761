@@ -1,6 +1,5 @@
 package com.game;
 
-import java.net.SocketAddress;
 import java.util.BitSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,10 +18,6 @@ public class GameRoomManager {
             int claimedindex
     ) {}
 
-    public record Player(
-        SocketAddress addrs,
-        long id
-    ){}
 
     static final AtomicInteger coreOneMatchCount = new AtomicInteger(0);
     static final AtomicInteger coreTwoMatchCount = new AtomicInteger(0);
@@ -76,7 +71,7 @@ public class GameRoomManager {
         });
     }
 
-    public final RoomAllocation allocateRoom(String matchId,Player[] PROVIDED_Player_ID_IP) {
+    public final RoomAllocation allocateRoom(long[] playerIDs,String matchId) {
 
         int port=-1;
         int claimedIndex=-1;
@@ -113,7 +108,7 @@ public class GameRoomManager {
         long matchStartTick = globalTick.get() + Match_Start_IN;
         long startTimeMillis = bootUnixMillis + (matchStartTick * TICK_NS) / 1_000_000L;
 
-        activeMatches[claimedIndex].activate(port, matchStartTick,PROVIDED_Player_ID_IP);
+        activeMatches[claimedIndex].activate(port, matchStartTick,playerIDs);
         return new RoomAllocation(port, startTimeMillis,claimedIndex);
     }
 

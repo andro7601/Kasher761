@@ -9,6 +9,7 @@ import com.web.db.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +19,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final BCryptPasswordEncoder passwordEncoder;
 
+    @Transactional
     public AuthResponse register(RegisterRequest req) {
         if (userRepository.existsByUsername(req.username()))
             throw new IllegalArgumentException("Username already taken: " + req.username());
@@ -36,6 +38,7 @@ public class AuthService {
         return new AuthResponse(jwtService.generateToken(saved));
     }
 
+    @Transactional
     public AuthResponse login(LoginRequest req) {
         User user = userRepository.findByUsername(req.username())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));

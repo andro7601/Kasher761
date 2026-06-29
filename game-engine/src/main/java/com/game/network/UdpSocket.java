@@ -6,8 +6,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
-import com.game.GameRoomManager.Player;
-
 public final class UdpSocket {
 
 
@@ -23,7 +21,7 @@ public final class UdpSocket {
 
 
 
-    public UdpSocket(int port, Player[] players) throws IOException {
+    public UdpSocket(int port, long[] players) throws IOException {
         this.port = port;
         this.channel = DatagramChannel.open();
         this.channel.configureBlocking(false);
@@ -32,7 +30,7 @@ public final class UdpSocket {
 
         this.clientShards = new ClientShard[players.length];
         for(int i=0; i<players.length; ++i) {
-            this.clientShards[i]=new ClientShard(players[i].id(), players[i].addrs());
+            this.clientShards[i]=new ClientShard(players[i]);
         }
 
     }
