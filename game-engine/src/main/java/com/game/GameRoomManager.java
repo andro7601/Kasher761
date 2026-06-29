@@ -39,7 +39,9 @@ public class GameRoomManager {
         System.out.println("Igniting Game Engine: Spawning isolated P-Core pipelines...");
 
         ExecutorService executor = Executors.newFixedThreadPool(3);
+
         GameLoop loop = new GameLoop();
+
         executor.submit(() -> {
             try {
                 pinToCore(0);

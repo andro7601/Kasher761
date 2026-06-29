@@ -58,7 +58,6 @@ public class GameLoop {
 
                 UdpSocket sock = match.socket;
                 if (sock == null) continue;
-
                 sock.Empty_OS_BUFFER_IO();
                 sock.SEND_OUT_PACKETS_IO();
             }
