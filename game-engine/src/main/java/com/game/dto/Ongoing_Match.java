@@ -18,9 +18,9 @@ public class Ongoing_Match {
         return active;
     }
 
-    public void activate(int port, long startTick, long[] players) {
+    public void activate(int port, long startTick, long[] players, String matchId) {
         try {
-            this.socket = new UdpSocket(port, players);
+            this.socket = new UdpSocket(port, players, matchId);
             this.startTick = startTick;
             this.active = true;
             System.out.println("Match activated on UDP port " + port

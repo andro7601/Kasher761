@@ -6,6 +6,7 @@ import com.web.controllers.auth.RegisterRequest;
 import com.web.db.entities.User;
 
 import com.web.db.repositories.UserRepository;
+import com.web.redis.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final RedisService redisService;
 
     @Transactional
     public AuthResponse register(RegisterRequest req) {
@@ -35,6 +37,8 @@ public class AuthService {
                         .build()
         );
 
+        redisService.SAVE_PLAYER_INFO(saved.getId(), saved.getUsername(), saved.getEmail(), 150);
+
         return new AuthResponse(jwtService.generateToken(saved));
     }
 
@@ -45,6 +49,8 @@ public class AuthService {
 
         if (!passwordEncoder.matches(req.password(), user.getPassword()))
             throw new IllegalArgumentException("Invalid username or password");
+
+        redisService.SAVE_PLAYER_INFO(user.getId(), user.getUsername(), user.getEmail(), 150);
 
         return new AuthResponse(jwtService.generateToken(user));
     }

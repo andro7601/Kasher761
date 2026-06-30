@@ -22,4 +22,7 @@ public class MatchmakingService {
         if(!gameModeRegistry.exists(gamemode))return ;
         redisService.REMOVE_PLAYER_FROM_MATCHMAKING(playerID,gamemode);
     }
+    public final String getMatch(long playerID) {
+        return redisService.GET_MATCH(playerID);
+    }
 }

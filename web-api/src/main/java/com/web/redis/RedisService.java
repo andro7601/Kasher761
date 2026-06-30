@@ -74,7 +74,7 @@ public class RedisService {
         return result.stream().map(Long::valueOf).toList();
     }
 
-    public void CREATE_MATCH(List<Long> players, String matchId) {
+    public void CREATE_MATCH(List<Long> players, String matchId, String gameMode, int serverPort) {
         for (long playerId : players) {
             redisTemplate.opsForValue().set(
                     playerMatchKey(playerId),
@@ -83,6 +83,62 @@ public class RedisService {
             );
             REMOVE_PLAYER_FROM_MATCHMAKING(playerId);
         }
+        STORE_MATCH(matchId, gameMode, serverPort, players);
+    }
+
+    public void STORE_MATCH(String matchId, String gameMode, int serverPort, List<Long> players) {
+        String infoKey = matchInfoKey(matchId);
+        redisTemplate.opsForHash().put(infoKey, "gameMode", gameMode);
+        redisTemplate.opsForHash().put(infoKey, "serverPort", String.valueOf(serverPort));
+        redisTemplate.expire(infoKey, Duration.ofHours(2));
+
+        String playersKey = matchPlayersKey(matchId);
+        String[] playerIds = players.stream().map(String::valueOf).toArray(String[]::new);
+        redisTemplate.opsForSet().add(playersKey, playerIds);
+        redisTemplate.expire(playersKey, Duration.ofHours(2));
+    }
+
+    public String GET_MATCH(long playerId) {
+        return redisTemplate.opsForValue().get(playerMatchKey(playerId));
+    }
+
+    public String GET_MATCH_GAMEMODE(String matchId) {
+        return (String) redisTemplate.opsForHash().get(matchInfoKey(matchId), "gameMode");
+    }
+
+    public Integer GET_MATCH_PORT(String matchId) {
+        String portStr = (String) redisTemplate.opsForHash().get(matchInfoKey(matchId), "serverPort");
+        return portStr != null ? Integer.parseInt(portStr) : null;
+    }
+
+    public Set<String> GET_MATCH_PLAYERS(String matchId) {
+        return redisTemplate.opsForSet().members(matchPlayersKey(matchId));
+    }
+
+    public boolean IS_PLAYER_IN_MATCH(String matchId, long playerId) {
+        Boolean isMember = redisTemplate.opsForSet().isMember(matchPlayersKey(matchId), String.valueOf(playerId));
+        return isMember != null && isMember;
+    }
+
+    public void SAVE_PLAYER_INFO(long playerId, String username, String email, int elo) {
+        String key = playerInfoKey(playerId);
+        redisTemplate.opsForHash().put(key, "username", username);
+        redisTemplate.opsForHash().put(key, "email", email);
+        redisTemplate.opsForHash().put(key, "elo", String.valueOf(elo));
+        redisTemplate.expire(key, Duration.ofHours(24));
+    }
+
+    public String GET_PLAYER_INFO_FIELD(long playerId, String field) {
+        Object val = redisTemplate.opsForHash().get(playerInfoKey(playerId), field);
+        return val != null ? val.toString() : null;
+    }
+
+    public void DELETE_PLAYER_INFO(long playerId) {
+        redisTemplate.delete(playerInfoKey(playerId));
+    }
+
+    public void REMOVE_PLAYERS_FROM_MATCHMAKING(long playerId) {
+        REMOVE_PLAYER_FROM_MATCHMAKING(playerId);
     }
 
     private String bucketKey(String gamemode, int bucketIndex) {
@@ -95,5 +151,17 @@ public class RedisService {
 
     private String playerMatchKey(long playerId) {
         return PREFIX_FOR_MATCHMAKING + PREFIX_FOR_MATCHMAKING_MAP_PLAYERID_TO_MATCHID + playerId;
+    }
+
+    private String matchInfoKey(String matchId) {
+        return PREFIX_FOR_MATCH + matchId + SUFFIX_FOR_MATCH_INFO;
+    }
+
+    private String matchPlayersKey(String matchId) {
+        return PREFIX_FOR_MATCH + matchId + SUFFIX_FOR_MATCH_PLAYERS;
+    }
+
+    private String playerInfoKey(long playerId) {
+        return PREFIX_FOR_LIVE_PLAYERS + playerId;
     }
 }

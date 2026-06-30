@@ -26,5 +26,12 @@ public class Matchmaking {
         matchmakingService.leaveQueue(securityService.getPlayerId(),joinQueueRequestBody.gamemode());
         return ResponseEntity.ok().build();
     }
-
+    @GetMapping("/match")
+    public ResponseEntity<String> getMatch() {
+        String matchId = matchmakingService.getMatch(securityService.getPlayerId());
+        if (matchId == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(matchId);
+    }
 }

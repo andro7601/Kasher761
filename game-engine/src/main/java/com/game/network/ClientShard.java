@@ -10,12 +10,20 @@ import static com.game.network.UdpSocket.MAX_PACKET_SIZE;
 
 public class ClientShard {
     private final long Player_ID;
-    public final SocketAddress Address=null;
+    public volatile SocketAddress Address = null;
     private static final int RING_CAPACITY_PER_PLAYER = 32;
     private static final int MASK = RING_CAPACITY_PER_PLAYER - 1;
 
     ClientShard(long Id){
         this.Player_ID=Id;
+    }
+
+    public long getPlayerId() {
+        return Player_ID;
+    }
+
+    public void setAddress(SocketAddress Address) {
+        this.Address = Address;
     }
 
     private final ByteBuffer[] buffer=new ByteBuffer[RING_CAPACITY_PER_PLAYER];

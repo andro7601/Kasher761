@@ -32,8 +32,10 @@ public class MatchmakingScheduler {
                     long[] primitiveArray = toMatch.stream().mapToLong(Long::longValue).toArray();
                     String matchId = UUID.randomUUID().toString();
 
-                    redisService.CREATE_MATCH(toMatch, matchId);
-                    gameRoomManager.allocateRoom(primitiveArray,matchId);
+                    GameRoomManager.RoomAllocation allocation = gameRoomManager.allocateRoom(primitiveArray, matchId);
+                    if (allocation != null) {
+                        redisService.CREATE_MATCH(toMatch, matchId, gameMode.getName(), allocation.port());
+                    }
                 }
             }
         }

@@ -110,8 +110,8 @@ public class GameRoomManager {
         long matchStartTick = globalTick.get() + Match_Start_IN;
         long startTimeMillis = bootUnixMillis + (matchStartTick * TICK_NS) / 1_000_000L;
 
-        activeMatches[claimedIndex].activate(port, matchStartTick,playerIDs);
-        return new RoomAllocation(port, startTimeMillis,claimedIndex);
+        activeMatches[claimedIndex].activate(port, matchStartTick, playerIDs, matchId);
+        return new RoomAllocation(port, startTimeMillis, claimedIndex);
     }
 
     private static void pinToCore(int cpuId) {
