@@ -1,4 +1,4 @@
-package com.web.controllers.matchmaking;
+package com.web.app.controllers.matchmaking;
 
 import com.web.configandsecurity.security.SecurityService;
 import com.web.matchmaking.MatchmakingService;
@@ -13,7 +13,7 @@ public class Matchmaking {
     private final MatchmakingService matchmakingService;
     private final SecurityService securityService;
 
-    private final int ALL_PLAYERS_ELO_TESTING=150;
+    public static final int ALL_PLAYERS_ELO_TESTING=150;
 
 
     @PostMapping("/join")
