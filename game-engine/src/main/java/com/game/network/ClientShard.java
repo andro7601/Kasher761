@@ -40,7 +40,7 @@ public class ClientShard {
         int idx = (int) (writeseq & MASK);
         ByteBuffer old = buffer[idx];
         buffer[idx] = buf;
-        writeseq++;                  // publish last — single writer, volatile is enough
+        writeseq++;
         if (old != null) old.clear();
         return (old != null) ? old : ByteBuffer.allocateDirect(MAX_PACKET_SIZE);
     }
@@ -50,14 +50,14 @@ public class ClientShard {
         while (readseq < writeseq) {
             int idx = (int) (readseq & MASK);
             ByteBuffer buf = buffer[idx];
-            PacketHandler.handle(buf);
+            ///////handler was here
             readseq++;
         }
     }
 
     public final void Update_Last_Snapshot_Buffer_LOOP(Match_Snapshot snapshot) {
         Write_Buffer.clear();
-        PacketHandler.Snapshot_To_Buffer(snapshot, Write_Buffer);
+        //snapshot to buffer was here
         ByteBuffer temp = Write_Buffer;
         Write_Buffer = Send_Buffer;
         Send_Buffer = temp;

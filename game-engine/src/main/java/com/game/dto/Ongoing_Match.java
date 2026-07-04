@@ -2,6 +2,9 @@ package com.game.dto;
 
 import com.game.network.UdpSocket;
 
+import java.util.Map;
+import java.util.UUID;
+
 public class Ongoing_Match {
 
     private int MAX_AMOUNT_OF_INGOING_SNAPSHOTS = 10;
@@ -18,9 +21,9 @@ public class Ongoing_Match {
         return active;
     }
 
-    public void activate(int port, long startTick, long[] players, String matchId) {
+    public void activate(int port, long startTick, Map<UUID,Long> UuidToPlayerId, String matchId) {
         try {
-            this.socket = new UdpSocket(port, players, matchId);
+            this.socket = new UdpSocket(port, UuidToPlayerId,matchId);
             this.startTick = startTick;
             this.active = true;
             System.out.println("Match activated on UDP port " + port

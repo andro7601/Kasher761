@@ -1,4 +1,4 @@
-package com.web.redis;
+package com.web.infra.redis;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static com.web.redis.StartupSchemaInit.*;
+import static com.web.infra.redis.StartupSchemaInit.*;
 
 @RequiredArgsConstructor
 @Component

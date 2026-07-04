@@ -1,12 +1,11 @@
 package com.web;
 
-import com.web.db.entities.GameMode;
-import com.web.db.repositories.GameModeRepository;
+import com.web.infra.db.entities.GameMode;
+import com.web.infra.db.repositories.GameModeRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -15,16 +14,21 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GameModeRegistry {
 
-    private final GameModeRepository repository;
+    private final GameModeRepository gameModeRepository;
+
     private Map<String, GameMode> modes;
     private Map<String, GameMode> enabledmodes;
 
     @PostConstruct
     public void load() {
-        modes = repository.findAll()
+        modes = gameModeRepository.findAll()
                 .stream()
                 .collect(Collectors.toMap(GameMode::getName, m -> m));
-        enabledmodes =modes.entrySet().stream().filter(m->m.getValue().isEnabled()).collect(Collectors.toMap(Map.Entry::getKey,m -> m.getValue()));
+
+        enabledmodes = modes.entrySet().
+                stream().
+                filter(m -> m.getValue().isEnabled())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     public GameMode get(String name) { return modes.get(name); }

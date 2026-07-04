@@ -1,7 +1,7 @@
-package com.web.redis;
+package com.web.infra.redis;
 
 import com.web.GameModeRegistry;
-import com.web.db.entities.GameMode;
+import com.web.infra.db.entities.GameMode;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -26,9 +26,9 @@ public class StartupSchemaInit{
 
     public static final String PREFIX_FOR_MATCH="match:";
 
-    public static final String SUFFIX_FOR_MATCH_INFO=":info";
+    public static final String SUFFIX_FOR_MATCH_INFO=":info";//HASH
 
-    public static final String SUFFIX_FOR_MATCH_PLAYERS=":players";
+    public static final String SUFFIX_FOR_MATCH_PLAYERS=":players";//SET
 
     public static final String PREFIX_FOR_LIVE_PLAYERS="LivePlayers:";
 

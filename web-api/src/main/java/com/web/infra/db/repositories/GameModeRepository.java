@@ -1,6 +1,6 @@
-package com.web.db.repositories;
+package com.web.infra.db.repositories;
 
-import com.web.db.entities.GameMode;
+import com.web.infra.db.entities.GameMode;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

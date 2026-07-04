@@ -1,7 +1,7 @@
 package com.web.matchmaking;
 
 import com.web.GameModeRegistry;
-import com.web.redis.RedisService;
+import com.web.infra.redis.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +21,9 @@ public class MatchmakingService {
     public final void leaveQueue(long playerID,String gamemode){
         if(!gameModeRegistry.exists(gamemode))return ;
         redisService.REMOVE_PLAYER_FROM_MATCHMAKING(playerID,gamemode);
+    }
+    public final void leaveQueue(long playerID){
+        redisService.REMOVE_PLAYER_FROM_MATCHMAKING(playerID);
     }
     public final String getMatch(long playerID) {
         return redisService.GET_MATCH(playerID);

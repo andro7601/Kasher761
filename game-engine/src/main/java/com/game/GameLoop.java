@@ -30,7 +30,7 @@ public class GameLoop {
             long currentTick = globalTick.get();
             for (int i = startIndex; i < endIndex; i++) {
                 Ongoing_Match match = activeMatches[i];
-                if (!match.active() && currentTick < match.startTick) continue;
+                if (!match.active() || currentTick < match.startTick) continue;
 
                 UdpSocket sock = match.socket;
                 if (sock == null) continue;
@@ -55,7 +55,6 @@ public class GameLoop {
             for (int i = 0; i < 2 * MAX_MATCHES_PER_CORE; i++) {
                 Ongoing_Match match = activeMatches[i];
                 if (!match.active() && currentTick < match.startTick) continue;
-
                 UdpSocket sock = match.socket;
                 if (sock == null) continue;
                 sock.Empty_OS_BUFFER_IO();

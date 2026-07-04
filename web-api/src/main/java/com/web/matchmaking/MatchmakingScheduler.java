@@ -1,15 +1,19 @@
 package com.web.matchmaking;
 
 import com.game.GameRoomManager;
+import com.game.RoomAllocation;
+import com.game.dto.ModeInfo;
 import com.web.GameModeRegistry;
-import com.web.db.entities.GameMode;
-import com.web.redis.RedisService;
+import com.web.infra.db.entities.GameMode;
+import com.web.infra.redis.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import static com.web.redis.StartupSchemaInit.BUCKET_COUNT;
+import java.util.concurrent.ThreadLocalRandom;
+
+import static com.web.infra.redis.StartupSchemaInit.BUCKET_COUNT;
 
 @RequiredArgsConstructor
 @Component
@@ -32,7 +36,17 @@ public class MatchmakingScheduler {
                     long[] primitiveArray = toMatch.stream().mapToLong(Long::longValue).toArray();
                     String matchId = UUID.randomUUID().toString();
 
-                    GameRoomManager.RoomAllocation allocation = gameRoomManager.allocateRoom(primitiveArray, matchId);
+                    RoomAllocation allocation = gameRoomManager.allocateRoom(
+                            primitiveArray,
+                            matchId,
+                            new ModeInfo(
+                              gameMode.getWidth(),
+                              gameMode.getHeight(),
+                              gameMode.getTiles(),
+                              gameMode.getSpawnPoints(),
+                              gameMode.getPlayerCount()
+                            )
+                    );
                     if (allocation != null) {
                         redisService.CREATE_MATCH(toMatch, matchId, gameMode.getName(), allocation.port());
                     }

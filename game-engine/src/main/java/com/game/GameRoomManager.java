@@ -1,30 +1,25 @@
 package com.game;
 
-import java.util.BitSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.game.dto.ModeInfo;
 import net.openhft.affinity.Affinity;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import static com.game.GameLoop.activeMatches;
 
 public class GameRoomManager {
-
-    public record RoomAllocation(
-            int port,
-            long startTimeMillis,
-            int claimedindex
-    ) {}
 
 
     static final AtomicInteger coreOneMatchCount = new AtomicInteger(0);
     static final AtomicInteger coreTwoMatchCount = new AtomicInteger(0);
 
     static final int MAX_MATCHES_PER_CORE=1;
-
-    static final ConcurrentHashMap<String,String> activeRooms=new ConcurrentHashMap<>();
 
 
     public static final long TICK_NS = 1_000_000_000L / 60; // 16,666,666 ns — exact, no rounding
@@ -35,6 +30,58 @@ public class GameRoomManager {
 
     private final int Max_Number_Of_Active_Players=100;
 
+    public final RoomAllocation allocateRoom(long[] playerIDs, String matchId, ModeInfo modeInfo) {
+
+        int port=-1;
+        int claimedIndex=-1;
+        while (true) {
+            int currentLoad = coreOneMatchCount.get();
+            if (currentLoad >= MAX_MATCHES_PER_CORE) {
+                break;
+            }
+            if (coreOneMatchCount.compareAndSet(currentLoad, currentLoad + 1)) {
+                port= 5000 + currentLoad; // Success on Core 2!
+                claimedIndex =currentLoad;
+                break;
+            }
+        }
+        if(port==-1) {
+            while (true) {
+                int currentLoad = coreTwoMatchCount.get();
+                if (currentLoad >= MAX_MATCHES_PER_CORE) {
+                    break;
+                }
+                if (coreTwoMatchCount.compareAndSet(currentLoad, currentLoad + 1)) {
+                    port = 6000 + currentLoad;
+                    claimedIndex =MAX_MATCHES_PER_CORE+currentLoad;
+                    break;
+                }
+            }
+        }
+        if(port==-1)return null;
+
+        List<Map.Entry<Long, UUID>> generatedPairs = Arrays.stream(playerIDs)
+                .boxed()
+                .map(id -> Map.entry(id, UUID.randomUUID()))
+                .toList();
+
+        Map<Long, UUID> playerIdToUuid = generatedPairs.stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        Map<UUID, Long> uuidToPlayerId = generatedPairs.stream()
+                .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
+
+        long matchStartTick = globalTick.get() + Match_Start_IN;
+        long startTimeMillis = bootUnixMillis + (matchStartTick * TICK_NS) / 1_000_000L;
+
+        UUID[] playersUuids = Arrays.stream(playerIDs)
+                .mapToObj(playerIdToUuid::get)
+                .toArray(UUID[]::new);
+
+        activeMatches[claimedIndex].activate(port, matchStartTick, uuidToPlayerId, matchId);
+
+        return new RoomAllocation(port, startTimeMillis, claimedIndex, playerIdToUuid);
+    }
     public final void start() {
         System.out.println("Igniting Game Engine: Spawning isolated P-Core pipelines...");
 
@@ -71,47 +118,6 @@ public class GameRoomManager {
                 e.printStackTrace();
             }
         });
-    }
-
-    public final RoomAllocation allocateRoom(long[] playerIDs,String matchId) {
-
-        int port=-1;
-        int claimedIndex=-1;
-        while (true) {
-            int currentLoad = coreOneMatchCount.get();
-            if (currentLoad >= MAX_MATCHES_PER_CORE) {
-                break;
-            }
-            if (coreOneMatchCount.compareAndSet(currentLoad, currentLoad + 1)) {
-                activeRooms.put(matchId, "CORE_0");
-                port= 5000 + currentLoad; // Success on Core 2!
-                claimedIndex =currentLoad;
-                break;
-            }
-        }
-        if(port==-1) {
-            while (true) {
-                int currentLoad = coreTwoMatchCount.get();
-                if (currentLoad >= MAX_MATCHES_PER_CORE) {
-                    break;
-                }
-                if (coreTwoMatchCount.compareAndSet(currentLoad, currentLoad + 1)) {
-                    activeRooms.put(matchId, "CORE_1");
-                    port = 6000 + currentLoad;
-                    claimedIndex =MAX_MATCHES_PER_CORE+currentLoad;
-                    break;
-                }
-            }
-        }
-        if(port==-1)return null;
-
-
-
-        long matchStartTick = globalTick.get() + Match_Start_IN;
-        long startTimeMillis = bootUnixMillis + (matchStartTick * TICK_NS) / 1_000_000L;
-
-        activeMatches[claimedIndex].activate(port, matchStartTick, playerIDs, matchId);
-        return new RoomAllocation(port, startTimeMillis, claimedIndex);
     }
 
     private static void pinToCore(int cpuId) {

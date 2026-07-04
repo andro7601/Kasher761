@@ -1,7 +1,7 @@
 package com.web.services;
 
 import com.web.configandsecurity.JwtConfig;
-import com.web.db.entities.User;
+import com.web.infra.db.entities.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;

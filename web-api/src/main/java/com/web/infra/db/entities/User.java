@@ -1,4 +1,4 @@
-package com.web.db.entities;
+package com.web.infra.db.entities;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
