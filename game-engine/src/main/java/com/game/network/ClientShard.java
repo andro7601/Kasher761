@@ -1,6 +1,6 @@
 package com.game.network;
 
-import com.game.dto.Match_Snapshot;
+import com.game.dto.MatchSnapshot;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -55,7 +55,7 @@ public class ClientShard {
         }
     }
 
-    public final void Update_Last_Snapshot_Buffer_LOOP(Match_Snapshot snapshot) {
+    public final void Update_Last_Snapshot_Buffer_LOOP(MatchSnapshot snapshot) {
         Write_Buffer.clear();
         //snapshot to buffer was here
         ByteBuffer temp = Write_Buffer;

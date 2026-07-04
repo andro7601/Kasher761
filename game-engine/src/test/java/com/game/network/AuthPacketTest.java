@@ -1,6 +1,6 @@
 package com.game.network;
 
-import com.game.dto.Ongoing_Match;
+import com.game.dto.OngoingMatch;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -8,6 +8,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -21,9 +23,12 @@ public class AuthPacketTest {
         int port = 9876;
         long playerId = 42L;
         UUID playerUuid = UUID.randomUUID();
+        Map<UUID, Long> UuidToPlayerId = new HashMap<>();
+        UuidToPlayerId.put(playerUuid,playerId);
+
         
-        Ongoing_Match match = new Ongoing_Match();
-        match.activate(port, 0, new long[]{playerId}, new UUID[]{playerUuid}, "test-match");
+        OngoingMatch match = new OngoingMatch();
+        match.activate(port, 0,UuidToPlayerId, "test-match",null);
         
         UdpSocket udpSocket = match.socket;
         assertNotNull(udpSocket, "UdpSocket should be initialized");

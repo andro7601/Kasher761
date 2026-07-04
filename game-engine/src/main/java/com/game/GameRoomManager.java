@@ -1,17 +1,17 @@
 package com.game;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.game.dto.ModeInfo;
+import com.game.gamerules.GameLoop;
 import net.openhft.affinity.Affinity;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-import static com.game.GameLoop.activeMatches;
+import static com.game.gamerules.GameLoop.activeMatches;
 
 public class GameRoomManager {
 
@@ -19,7 +19,7 @@ public class GameRoomManager {
     static final AtomicInteger coreOneMatchCount = new AtomicInteger(0);
     static final AtomicInteger coreTwoMatchCount = new AtomicInteger(0);
 
-    static final int MAX_MATCHES_PER_CORE=1;
+    public static final int MAX_MATCHES_PER_CORE=1;
 
 
     public static final long TICK_NS = 1_000_000_000L / 60; // 16,666,666 ns — exact, no rounding
@@ -78,7 +78,7 @@ public class GameRoomManager {
                 .mapToObj(playerIdToUuid::get)
                 .toArray(UUID[]::new);
 
-        activeMatches[claimedIndex].activate(port, matchStartTick, uuidToPlayerId, matchId);
+        activeMatches[claimedIndex].activate(port, matchStartTick, uuidToPlayerId, matchId,modeInfo);
 
         return new RoomAllocation(port, startTimeMillis, claimedIndex, playerIdToUuid);
     }
