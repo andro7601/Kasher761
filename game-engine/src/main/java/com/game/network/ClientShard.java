@@ -1,18 +1,17 @@
 package com.game.network;
 
-import com.game.dto.MatchSnapshot;
+import com.game.dto.PlayerInputState;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
-import static com.game.network.UdpSocket.MAX_PACKET_SIZE;
-
 
 public class ClientShard {
     private final long Player_ID;
+
     public volatile SocketAddress Address = null;
-    private static final int RING_CAPACITY_PER_PLAYER = 32;
-    private static final int MASK = RING_CAPACITY_PER_PLAYER - 1;
+
+    public final PlayerInputState inputState = new PlayerInputState();
 
     ClientShard(long Id){
         this.Player_ID=Id;
@@ -26,44 +25,8 @@ public class ClientShard {
         this.Address = Address;
     }
 
-    private final ByteBuffer[] buffer=new ByteBuffer[RING_CAPACITY_PER_PLAYER];
-
-    private volatile ByteBuffer Send_Buffer =ByteBuffer.allocateDirect(MAX_PACKET_SIZE);//read By IO
-
-    private ByteBuffer Write_Buffer =ByteBuffer.allocateDirect(MAX_PACKET_SIZE);//
-
-    private volatile long writeseq = 0;
-    private volatile long readseq = 0;
-
-    public final ByteBuffer Receive_Packet_IO(ByteBuffer buf) {
-        if (writeseq - readseq >= RING_CAPACITY_PER_PLAYER) return buf;
-        int idx = (int) (writeseq & MASK);
-        ByteBuffer old = buffer[idx];
-        buffer[idx] = buf;
-        writeseq++;
-        if (old != null) old.clear();
-        return (old != null) ? old : ByteBuffer.allocateDirect(MAX_PACKET_SIZE);
+    public final ByteBuffer receivePacketIO(ByteBuffer buf) {
+        return null;
     }
 
-    public final void Read_Packet_LOOP(){
-        if(writeseq == readseq) return;
-        while (readseq < writeseq) {
-            int idx = (int) (readseq & MASK);
-            ByteBuffer buf = buffer[idx];
-            ///////handler was here
-            readseq++;
-        }
-    }
-
-    public final void Update_Last_Snapshot_Buffer_LOOP(MatchSnapshot snapshot) {
-        Write_Buffer.clear();
-        //snapshot to buffer was here
-        ByteBuffer temp = Write_Buffer;
-        Write_Buffer = Send_Buffer;
-        Send_Buffer = temp;
-    }
-
-    public ByteBuffer getSendbuf() {
-        return  Send_Buffer;
-    }
 }

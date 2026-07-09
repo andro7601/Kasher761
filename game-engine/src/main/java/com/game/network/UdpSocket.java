@@ -1,5 +1,9 @@
 package com.game.network;
 
+import com.game.dto.PlayerInputState;
+
+import static com.game.network.PacketParsing.*;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -13,7 +17,9 @@ public final class UdpSocket {
 
     public static final int MAX_PACKET_SIZE = 1400;
 
-    private ByteBuffer tempBuf = ByteBuffer.allocateDirect(MAX_PACKET_SIZE);
+    private ByteBuffer tempBuf  = ByteBuffer.allocateDirect(MAX_PACKET_SIZE);
+    /** Pre-allocated outgoing buffer — fill, then pass to sendToAll(). Never used concurrently. */
+    public  final ByteBuffer sendBuf = ByteBuffer.allocateDirect(MAX_PACKET_SIZE);
 
     private final DatagramChannel channel;
     private final int port;
@@ -23,7 +29,7 @@ public final class UdpSocket {
 
     public final ClientShard[] clientShards;
 
-    public UdpSocket(int port, Map<UUID,Long> UuidToPlayerId, String matchId) throws IOException {
+    public UdpSocket(int port, Map<UUID, Long> UuidToPlayerId, String matchId) throws IOException {
         this.port = port;
         this.matchId = matchId;
         this.channel = DatagramChannel.open();
@@ -31,7 +37,7 @@ public final class UdpSocket {
         this.channel.setOption(java.net.StandardSocketOptions.SO_RCVBUF, 2 * 1024 * 1024);
         this.channel.bind(new InetSocketAddress("0.0.0.0", port));
         this.PlayerCount = UuidToPlayerId.size();
-        this.UUID_TO_PLAYER_ID=UuidToPlayerId;
+        this.UUID_TO_PLAYER_ID = UuidToPlayerId;
 
 
         this.clientShards = new ClientShard[PlayerCount];
@@ -42,6 +48,7 @@ public final class UdpSocket {
         }
     }
 
+    // UdpSocket.Empty_OS_BUFFER_IO — parses inline, no ring involved
     public void Empty_OS_BUFFER_IO() {
         while (true) {
             tempBuf.clear();
@@ -52,66 +59,73 @@ public final class UdpSocket {
                 return;
             }
             if (addr == null) return;
-
             tempBuf.flip();
-            if (!tempBuf.hasRemaining()) continue;
 
-            byte firstbyte = tempBuf.get();
-            PacketType TYPE = PacketType.fromByte(firstbyte);
 
-            switch (TYPE) {
-                case AUTH:
-                    if (tempBuf.remaining() < 16) continue;
+            PacketType type = PacketType.fromByte(tempBuf.get());
+            switch (type) {
+                case AUTH -> {
+                    long first = tempBuf.getLong();
+                    long second = tempBuf.getLong();
+                    UUID uuid = new UUID(first, second);
+                    Long id = UUID_TO_PLAYER_ID.get(uuid);
+                    if (id == null) continue;
+                    int idx = find_Index(id);
+                    if (idx == -1) continue; // defensive: id valid but no matching shard somehow
+                    clientShards[idx].setAddress(addr);
 
-                    long first8bits = tempBuf.getLong();
-                    long second8bits = tempBuf.getLong();
-                    UUID key = new UUID(first8bits, second8bits);
+                }
+                case INPUT -> {
 
-                    Long playerId = UUID_TO_PLAYER_ID.get(key);
-                    if (playerId == null) continue;
+                    int index = find_Index(addr);
+                    if(index==-1) continue;
 
-                    int authIndex = find_Index(playerId);
-                    if (authIndex == -1) continue;
+                    long tick = tempBuf.getLong();
+                    byte MovementBitMask = tempBuf.get();
+                    float angleRad = tempBuf.getFloat();
+                    byte gunAndAbilityBitMask = tempBuf.get();
 
-                    clientShards[authIndex].setAddress(addr);
+                    PlayerInputState input = clientShards[index].inputState; // direct reference, no ring hop
 
+                    if (tick > input.lastProcessedTick) {
+                        input.lastProcessedTick = tick;
+                        input.movementBitmask = MovementBitMask;
+                        input.right=(MovementBitMask & RIGHT_BIT)>0;
+                        input.left=(MovementBitMask & LEFT_BIT)>0;
+                        input.up=(MovementBitMask & UP_BIT)>0;
+                        input.down=(MovementBitMask & DOWN_BIT)>0;
+                        input.angleRad = angleRad;
+                    }
+                    if ((gunAndAbilityBitMask & AbilityBit) != 0) {
+                        input.queueAbility(tick, angleRad);
+                    }
+                    if ((gunAndAbilityBitMask & gunShotBit) != 0) {
+                        input.queueShot(tick, angleRad);
+                    }
+
+                }
+                case UNKNOWN -> {
                     continue;
+                }
 
-                case INPUT:
-                    int inputIndex = find_Index(addr);
-
-                    if (inputIndex == -1) continue;
-
-                    tempBuf = clientShards[inputIndex].Receive_Packet_IO(tempBuf);
-
-                    continue;
-
-                case UNKNOWN:continue;
-                default:
-                    continue;
             }
         }
     }
 
     public void SEND_OUT_PACKETS_IO() throws IOException {
         for (int i = 0; i < clientShards.length; ++i) {
-            ClientShard clientShard = clientShards[i];
-            SocketAddress addr = clientShard.Address;
-            if (addr != null) {
-                ByteBuffer sendbuf = clientShard.getSendbuf();
-                channel.send(sendbuf, addr);
-            }
+            //send out packets yo
         }
     }
 
-    int find_Index(SocketAddress addr) {
+    public int find_Index(SocketAddress addr) {
         for (int i = 0; i < clientShards.length; i++) {
             if (clientShards[i].Address != null && clientShards[i].Address.equals(addr)) return i;
         }
         return -1;
     }
 
-    int find_Index(long playerId) {
+    public int find_Index(long playerId) {
         for (int i = 0; i < clientShards.length; i++) {
             if (clientShards[i].getPlayerId() == playerId) return i;
         }
@@ -125,14 +139,41 @@ public final class UdpSocket {
         }
     }
 
+    /**
+     * Flips buf and sends it to every authenticated client.
+     * Call buf.clear() before filling, then pass directly here.
+     * Send failures are silently dropped — UDP is best-effort.
+     */
+    public void sendToAll(ByteBuffer buf) {
+        buf.flip();
+        for (int i = 0; i < clientShards.length; i++) {
+            SocketAddress addr = clientShards[i].Address;
+            if (addr == null) continue;
+            try {
+                channel.send(buf, addr);
+                buf.rewind(); // reset position for next client
+            } catch (IOException ignored) {}
+        }
+    }
+
+    /** Sends a MATCH_OVER packet to all clients. winnerId = -1 means draw (no survivors). */
+    public void sendMatchOver(long winnerId) {
+        sendBuf.clear();
+        sendBuf.put(PacketType.MATCH_OVER.code);
+        sendBuf.putLong(winnerId);
+        sendToAll(sendBuf);
+    }
+
     @Override
     public String toString() {
         return "UdpSocket[: " + port + " ]";
     }
 
-    enum PacketType {
+    public enum PacketType {
         AUTH(0),
         INPUT(1),
+        SNAPSHOT(2),
+        MATCH_OVER(3),
         UNKNOWN(-1);
 
         public final byte code;

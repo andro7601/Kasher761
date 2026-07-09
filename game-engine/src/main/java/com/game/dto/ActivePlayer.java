@@ -9,8 +9,6 @@ public class ActivePlayer {
     public short hp;
     public GunType type;
     public int team;
-    public long lastProcessedTick; // the server tick this player's last applied input was stamped with
-    // what order client sent them if its behind this just drop
 
     public ActivePlayer(long playerId, short hp, float x, float y, float angleRad, short ability, GunType type) {
         this.hp = hp;
@@ -59,16 +57,16 @@ public class ActivePlayer {
 
     public void copyFromLastSnapshot(ActivePlayer other) {
         this.playerId = other.playerId;
+
         this.x = other.x; this.y = other.y;
         this.vx = other.vx; this.vy = other.vy;
+
         this.angleRad = other.angleRad;
         this.ability = other.ability;
         this.hp = other.hp;
         this.type = other.type;
         this.team = other.team;
-        this.lastProcessedTick = other.lastProcessedTick;
         this.lastInputInfo = other.lastInputInfo;
         this.lastInputUsedInRow = other.lastInputUsedInRow;
     }
-
 }
